@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from category_encoders import TargetEncoder
 
 df = pd.read_csv('data_science_salaries.csv')
 
@@ -19,8 +20,14 @@ size_mapping = {
 df_encoded['company_size_encoded'] = df_encoded[column_name].map(size_mapping)
 df_encoded=df_encoded.drop(columns='company_size')
 
-top_3_jobs = df_encoded['job_title'].value_counts().head(3).index.tolist()
-df_encoded['job_title_group'] = df_encoded['job_title'].isin(top_3_jobs).astype(int)
+salaryTemp = df_encoded['salary_in_usd']
+salaryTemp = np.log(salaryTemp)
+df_encoded['salary_in_usd'] = salaryTemp.round(3)
+
+temp = df_encoded['salary_in_usd']
+job_encoded = TargetEncoder(cols='job_title', smoothing=10)
+df_encoded['job_title_encoded'] = job_encoded.fit_transform(df_encoded['job_title'], temp)
+df_encoded['job_title_encoded'] = df_encoded['job_title_encoded'].round(3)
 df_encoded=df_encoded.drop(columns='job_title')
 
 column_name2='experience_level'

@@ -24,9 +24,8 @@ def regFormula(model, feature_names, target_name='salary_in_usd'):
     print(equation)
 
 y_pred = model.predict(X_test)
-
-mse=mean_squared_error(y_test, y_pred)
-r2=r2_score(y_test, y_pred)
+mse = mean_squared_error(np.exp(y_test), np.exp(y_pred))
+r2 = r2_score(np.exp(y_test), np.exp(y_pred))
 print (f"Mean Square Error: {mse:.4f}")
 print (f"R-Squared: {r2:.4f}")
 
