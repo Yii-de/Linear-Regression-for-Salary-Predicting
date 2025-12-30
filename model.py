@@ -30,12 +30,14 @@ print (f"Mean Square Error: {mse:.4f}")
 print (f"R-Squared: {r2:.4f}")
 
 feature_names = [
-    'emp_is_UnitedStates',
-    'work_model_On-site',
-    'work_model_Remote',
+    'work_models_On-site',
+    'work_models_Remote',
     'comp_is_US',
     'company_size_encoded',
-    'job_title_group',
+    'domain_expertise_Data Engineering',
+    'domain_expertise_Data Science',
+    'domain_expertise_Machine Learning / AI',
+    'domain_expertise_Other',
     'exp_level'
 ]
 regFormula(model, feature_names)
