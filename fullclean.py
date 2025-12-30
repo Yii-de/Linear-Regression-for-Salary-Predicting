@@ -40,7 +40,6 @@ df_encoded['domain_expertise'] = df_encoded['job_title'].apply(jobClassify)
 df_encoded = df_encoded.drop(columns='job_title')
 df_encoded = pd.get_dummies(df_encoded, columns=['domain_expertise'], drop_first=True, dtype=int)
 
-# 7. Mã hóa cấp độ kinh nghiệm (Ordinal)
 exp_mapping = {
     'Entry-level': 0,
     'Senior-level': 1,
@@ -50,6 +49,6 @@ exp_mapping = {
 df_encoded['exp_level'] = df_encoded['experience_level'].map(exp_mapping)
 df_encoded = df_encoded.drop(columns='experience_level')
 
-# 8. Lưu dữ liệu đã làm sạch
 df_encoded.to_csv('dataset_proceeded.csv', index=False)
+
 print("Đã lưu dữ liệu sạch vào file dataset_proceeded.csv")
