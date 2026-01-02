@@ -7,228 +7,135 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from scipy import stats
 
-# Đọc dữ liệu đã được xử lý
+# 1. ĐỌC DỮ LIỆU
+# Giả định: 'salary_in_usd' trong file này đã được Log-transform ở bước tiền xử lý
 df = pd.read_csv('dataset_proceeded.csv')
 
-# Chuẩn bị dữ liệu
+# 2. CHUẨN BỊ DỮ LIỆU
 X = df.drop(columns='salary_in_usd')
 y = df['salary_in_usd']
 
-# Split data (giống model.py)
+# Chia tập dữ liệu (Giữ nguyên random_state để đối chiếu)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=40)
 
-# Train model
+# 3. HUẤN LUYỆN MÔ HÌNH
 model = LinearRegression()
 model.fit(X_train, y_train)
 
-# Predictions (trong log scale)
+# 4. DỰ ĐOÁN (TRÊN LOG SCALE)
 y_pred = model.predict(X_test)
 
-# Convert về original scale để tính metrics
-y_test_original = np.exp(y_test)
-y_pred_original = np.exp(y_pred)
-
-# Tính metrics trên original scale
-mse = mean_squared_error(y_test_original, y_pred_original)
-rmse = np.sqrt(mse)
-r2 = r2_score(y_test_original, y_pred_original)
-mae = mean_absolute_error(y_test_original, y_pred_original)
-
-# Residuals trong original scale
-residuals_original = y_test_original - y_pred_original
-
-# Residuals trong log scale
+# 5. TÍNH TOÁN METRICS TRÊN LOG SCALE
+# Không dùng np.exp(), tính trực tiếp để xem sai số trên đơn vị Log
+mse_log = mean_squared_error(y_test, y_pred)
+rmse_log = np.sqrt(mse_log)
+r2_log = r2_score(y_test, y_pred)
+mae_log = mean_absolute_error(y_test, y_pred)
 residuals_log = y_test - y_pred
 
 print("="*60)
-print("MODEL PERFORMANCE METRICS")
+print("MODEL PERFORMANCE METRICS (LOG SCALE)")
 print("="*60)
-print(f"R² Score:                {r2:.4f}")
-print(f"Mean Squared Error:      ${mse:,.2f}")
-print(f"Root Mean Squared Error: ${rmse:,.2f}")
-print(f"Mean Absolute Error:     ${mae:,.2f}")
+print(f"R² Score:                {r2_log:.4f}")
+print(f"Mean Squared Error:      {mse_log:.4f}")
+print(f"Root Mean Squared Error: {rmse_log:.4f}")
+print(f"Mean Absolute Error:     {mae_log:.4f}")
 print("="*60)
 
-# ========== VISUALIZATION ==========
+# ========== TRỰC QUAN HÓA 1: HIỆU SUẤT TỔNG THỂ (LOG SCALE) ==========
 plt.style.use('seaborn-v0_8-darkgrid')
 fig = plt.figure(figsize=(18, 12))
 
-# 1. Actual vs Predicted (Original Scale)
+# 1. Actual vs Predicted (Log Scale)
 ax1 = plt.subplot(2, 3, 1)
-plt.scatter(y_test_original, y_pred_original, alpha=0.6, color='steelblue', 
-            edgecolors='navy', s=60, linewidth=0.5)
-plt.plot([y_test_original.min(), y_test_original.max()], 
-         [y_test_original.min(), y_test_original.max()], 
+plt.scatter(y_test, y_pred, alpha=0.6, color='steelblue', edgecolors='navy', s=60)
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 
          'r--', lw=2.5, label='Perfect Prediction')
-plt.xlabel('Actual Salary (USD)', fontsize=12, fontweight='bold')
-plt.ylabel('Predicted Salary (USD)', fontsize=12, fontweight='bold')
-plt.title('Actual vs Predicted Salary\n(Original Scale)', fontsize=13, fontweight='bold')
-plt.legend(fontsize=10)
-plt.grid(True, alpha=0.3)
+plt.xlabel('Actual Log(Salary)', fontsize=12, fontweight='bold')
+plt.ylabel('Predicted Log(Salary)', fontsize=12, fontweight='bold')
+plt.title('Actual vs Predicted\n(Log Scale)', fontsize=13, fontweight='bold')
+plt.legend()
 
-# 2. Residuals Distribution (Original Scale)
+# 2. Distribution of Residuals (Log Scale)
 ax2 = plt.subplot(2, 3, 2)
-plt.hist(residuals_original, bins=50, color='lightcoral', edgecolor='darkred', alpha=0.7)
-plt.axvline(x=0, color='red', linestyle='--', linewidth=2.5, label='Zero Error')
-plt.xlabel('Residuals (USD)', fontsize=12, fontweight='bold')
-plt.ylabel('Frequency', fontsize=12, fontweight='bold')
-plt.title('Distribution of Residuals\n(Original Scale)', fontsize=13, fontweight='bold')
-plt.legend(fontsize=10)
-plt.grid(True, alpha=0.3, axis='y')
+sns.histplot(residuals_log, kde=True, color='lightcoral', edgecolor='darkred', alpha=0.7)
+plt.axvline(x=0, color='red', linestyle='--', linewidth=2)
+plt.xlabel('Residuals (Log Difference)', fontsize=12, fontweight='bold')
+plt.title('Distribution of Residuals\n(Log Scale)', fontsize=13, fontweight='bold')
 
-# 3. Q-Q Plot (Log Scale Residuals)
+# 3. Q-Q Plot (Log Scale)
 ax3 = plt.subplot(2, 3, 3)
 stats.probplot(residuals_log, dist="norm", plot=plt)
 plt.title('Q-Q Plot of Residuals\n(Log Scale)', fontsize=13, fontweight='bold')
-plt.grid(True, alpha=0.3)
 
 # 4. Feature Importance (Coefficients)
 ax4 = plt.subplot(2, 3, 4)
-feature_names = [
-    'work_On-site',
-    'work_Remote',
-    'comp_is_US',
-    'company_size',
-    'DE',  # Data Engineering
-    'DS',  # Data Science
-    'ML/AI',
-    'Other',
-    'exp_level'
-]
+feature_names = ['work_On-site', 'work_Remote', 'comp_is_US', 'company_size', 
+                 'DE', 'DS', 'ML/AI', 'Other', 'exp_level']
 coefficients = model.coef_
 colors = ['green' if c > 0 else 'red' for c in coefficients]
-bars = plt.barh(feature_names, coefficients, color=colors, alpha=0.7, edgecolor='black', linewidth=1.2)
-plt.xlabel('Coefficient Value', fontsize=12, fontweight='bold')
-plt.ylabel('Features', fontsize=12, fontweight='bold')
-plt.title('Feature Importance\n(Model Coefficients)', fontsize=13, fontweight='bold')
-plt.axvline(x=0, color='black', linestyle='-', linewidth=1)
-plt.grid(True, alpha=0.3, axis='x')
+bars = plt.barh(feature_names, coefficients, color=colors, alpha=0.7, edgecolor='black')
+plt.axvline(x=0, color='black', lw=1)
+plt.title('Feature Importance\n(Log Scale Coefficients)', fontsize=13, fontweight='bold')
+for bar in bars:
+    plt.text(bar.get_width(), bar.get_y() + bar.get_height()/2, f'{bar.get_width():.3f}', va='center')
 
-# Thêm giá trị lên bars
-for bar, coef in zip(bars, coefficients):
-    width = bar.get_width()
-    plt.text(width, bar.get_y() + bar.get_height()/2, 
-             f'{coef:.3f}',
-             ha='left' if width > 0 else 'right',
-             va='center', fontsize=9, fontweight='bold')
-
-# 5. Residuals vs Predicted (Original Scale)
+# 5. Residuals vs Predicted (Log Scale) - Kiểm tra Homoscedasticity
 ax5 = plt.subplot(2, 3, 5)
-plt.scatter(y_pred_original, residuals_original, alpha=0.6, color='purple', 
-            edgecolors='darkviolet', s=60, linewidth=0.5)
-plt.axhline(y=0, color='red', linestyle='--', linewidth=2.5, label='Zero Residual')
-plt.xlabel('Predicted Salary (USD)', fontsize=12, fontweight='bold')
-plt.ylabel('Residuals (USD)', fontsize=12, fontweight='bold')
-plt.title('Residuals vs Predicted Values\n(Original Scale)', fontsize=13, fontweight='bold')
-plt.legend(fontsize=10)
-plt.grid(True, alpha=0.3)
+plt.scatter(y_pred, residuals_log, alpha=0.6, color='purple', edgecolors='darkviolet', s=60)
+plt.axhline(y=0, color='red', linestyle='--', lw=2)
+plt.xlabel('Predicted Log(Salary)', fontsize=12, fontweight='bold')
+plt.ylabel('Residuals', fontsize=12, fontweight='bold')
+plt.title('Residuals vs Predicted\n(Log Scale)', fontsize=13, fontweight='bold')
 
-# 6. Model Performance Summary
+# 6. Summary Table
 ax6 = plt.subplot(2, 3, 6)
 ax6.axis('off')
+summary_text = (
+    f"SUMMARY (LOG SCALE)\n"
+    f"{'-'*30}\n"
+    f"R² Score: {r2_log:.4f}\n"
+    f"RMSE: {rmse_log:.4f}\n"
+    f"MAE: {mae_log:.4f}\n"
+    f"Train size: {len(X_train)}\n"
+    f"Test size: {len(X_test)}"
+)
+plt.text(0.1, 0.5, summary_text, fontsize=12, family='monospace', 
+         bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
-metrics_text = f"""
-MODEL PERFORMANCE SUMMARY
-{'='*42}
-
-Performance Metrics (Original Scale):
-  • R² Score:            {r2:.4f}
-  • Mean Squared Error:  ${mse:,.0f}
-  • Root MSE:            ${rmse:,.0f}
-  • Mean Abs Error:      ${mae:,.0f}
-
-{'='*42}
-
-Dataset Information:
-  • Training samples:    {len(X_train)}
-  • Test samples:        {len(X_test)}
-  • Number of features:  {X.shape[1]}
-
-Model Parameters:
-  • Intercept (log):     {model.intercept_:.4f}
-  • Random State:        40
-
-{'='*42}
-Note: Model trained on log-transformed salaries
-Metrics calculated on original salary scale
-"""
-
-plt.text(0.1, 0.5, metrics_text, fontsize=10, family='monospace',
-         verticalalignment='center', 
-         bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.6, pad=1))
-plt.title('Model Statistics', fontsize=13, fontweight='bold', pad=20)
-
-plt.suptitle('Salary Prediction Model - Comprehensive Visualization', 
-             fontsize=16, fontweight='bold', y=0.995)
-
-plt.tight_layout()
-plt.savefig('model_visualization_complete.png', dpi=300, bbox_inches='tight')
-print("\n✓ Visualization saved as 'model_visualization_complete.png'")
+plt.suptitle('Salary Prediction Model - Comprehensive Log-Scale Analysis', fontsize=16, fontweight='bold', y=0.98)
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.savefig('model_analysis_log_scale.png', dpi=300)
 plt.show()
 
-# ========== ADDITIONAL VISUALIZATION: Feature Analysis ==========
+# ========== TRỰC QUAN HÓA 2: PHÂN TÍCH ĐẶC TRƯNG (LOG SCALE) ==========
 fig2, axes = plt.subplots(3, 3, figsize=(18, 14))
 axes = axes.ravel()
 
-full_feature_names = [
-    'work_models_On-site',
-    'work_models_Remote',
-    'comp_is_US',
-    'company_size_encoded',
-    'domain_expertise_Data Engineering',
-    'domain_expertise_Data Science',
-    'domain_expertise_Machine Learning / AI',
-    'domain_expertise_Other',
-    'exp_level'
-]
-
 for idx, (col, short_name) in enumerate(zip(X.columns, feature_names)):
+    if idx >= 9: break # Giới hạn 9 đặc trưng đầu tiên
     ax = axes[idx]
     
-    # Tạo dataframe để phân tích
-    feature_data = pd.DataFrame({
-        'Feature': X_test[col],
-        'Actual': y_test_original,
-        'Predicted': y_pred_original
-    })
+    # Tính trung bình log salary thực tế và dự đoán theo từng nhóm đặc trưng
+    feat_analysis = pd.DataFrame({'Feature': X_test[col], 'Actual': y_test, 'Predicted': y_pred})
+    grouped = feat_analysis.groupby('Feature').mean()
     
-    # Group by và tính trung bình
-    grouped = feature_data.groupby('Feature').mean()
+    x_pos = np.arange(len(grouped))
+    width = 0.35
+    ax.bar(x_pos - width/2, grouped['Actual'], width, label='Actual (Log)', color='steelblue')
+    ax.bar(x_pos + width/2, grouped['Predicted'], width, label='Predicted (Log)', color='coral')
     
-    if len(grouped) > 0:
-        x_pos = np.arange(len(grouped))
-        width = 0.35
-        
-        bars1 = ax.bar(x_pos - width/2, grouped['Actual'], width, 
-                      label='Actual', alpha=0.8, color='steelblue', edgecolor='navy')
-        bars2 = ax.bar(x_pos + width/2, grouped['Predicted'], width, 
-                      label='Predicted', alpha=0.8, color='coral', edgecolor='darkred')
-        
-        ax.set_xlabel(short_name, fontsize=11, fontweight='bold')
-        ax.set_ylabel('Average Salary (USD)', fontsize=10)
-        ax.set_title(f'Salary by {short_name}', fontsize=12, fontweight='bold')
-        ax.set_xticks(x_pos)
-        ax.set_xticklabels(grouped.index, rotation=45, ha='right')
-        ax.legend(fontsize=9)
-        ax.grid(True, alpha=0.3, axis='y')
-        
-        # Format y-axis
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1000:.0f}K'))
+    ax.set_title(f'Avg Log Salary by {short_name}', fontweight='bold')
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(grouped.index, rotation=45)
+    ax.set_ylabel('Log Value')
+    # Zoom vào vùng giá trị log để thấy rõ sự khác biệt (ví dụ từ 10.0 đến 12.5)
+    ax.set_ylim([y_test.min() * 0.95, y_test.max() * 1.05])
+    ax.legend(fontsize=8)
 
-plt.suptitle('Average Salary Analysis by Feature', 
-             fontsize=16, fontweight='bold', y=0.995)
-
-plt.tight_layout()
-plt.savefig('model_feature_analysis.png', dpi=300, bbox_inches='tight')
-print("✓ Feature analysis saved as 'model_feature_analysis.png'")
+plt.suptitle('Feature Analysis: Actual vs Predicted (Log Scale Mean)', fontsize=16, fontweight='bold')
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.savefig('feature_analysis_log_scale.png', dpi=300)
 plt.show()
 
-print("\n" + "="*60)
-print("VISUALIZATION COMPLETED SUCCESSFULLY!")
-print("="*60)
-print("\nGenerated files:")
-print("  1. model_visualization_complete.png")
-print("  2. model_feature_analysis.png")
-print(f"\nModel R² Score: {r2:.4f}")
-print(f"Root Mean Squared Error: ${rmse:,.2f}")
-print("="*60)
+print("\n✓ Đã lưu biểu đồ: 'model_analysis_log_scale.png' và 'feature_analysis_log_scale.png'")
